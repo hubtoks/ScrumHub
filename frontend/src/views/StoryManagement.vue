@@ -50,11 +50,17 @@
             <span class="priority-num">{{ scope.row.priority }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="100" align="center">
+        <el-table-column prop="status" label="状态" width="90" align="center">
           <template #default="scope">
             <span class="status-dot" :class="scope.row.status" :title="statusLabel(scope.row.status)">
               {{ statusLabel(scope.row.status) }}
             </span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="assignee" label="负责人" width="110" align="center">
+          <template #default="scope">
+            <span class="assignee-name" v-if="scope.row.assignee">{{ scope.row.assignee }}</span>
+            <span class="assignee-empty" v-else>-</span>
           </template>
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="165" />
@@ -85,6 +91,11 @@
               </el-select>
             </el-form-item>
           </el-col>
+          <el-col :span="12">
+            <el-form-item label="负责人">
+              <el-input v-model="form.assignee" placeholder="输入用户名" />
+            </el-form-item>
+          </el-col>
         </el-row>
       </el-form>
       <template #footer>
@@ -97,6 +108,7 @@
 
 <script>
 import { getStories, saveStory, deleteStory } from '../api'
+import { store } from '../store'
 const POINTS = [0.5, 1, 2, 3, 5, 8, 20, 40]
 
 export default {
@@ -105,13 +117,20 @@ export default {
     return {
       POINTS, stories: [],
       dialogVisible: false, isEdit: false,
-      form: { id: null, title: '', description: '', points: 1, status: 'todo' }
+      form: { id: null, title: '', description: '', points: 1, status: 'todo', assignee: '' }
     }
   },
-  mounted() { this.loadStories() },
+  computed: {
+    projectId() { return store.currentProjectId }
+  },
+  watch: {
+    projectId: { handler() { this.loadStories() }, immediate: true }
+  },
   methods: {
     async loadStories() {
-      const res = await getStories()
+      const projectId = store.currentProjectId
+      if (!projectId) { this.stories = []; return }
+      const res = await getStories({ projectId })
       if (res.code === 200) this.stories = res.data
     },
     statusLabel(s) {
@@ -119,11 +138,13 @@ export default {
     },
     openDialog(row = null) {
       this.isEdit = !!row
-      this.form = row ? { ...row } : { id: null, title: '', description: '', points: 1, status: 'todo' }
+      this.form = row ? { ...row } : { id: null, title: '', description: '', points: 1, status: 'todo', assignee: '', projectId: store.currentProjectId }
       this.dialogVisible = true
     },
     async handleSave() {
-      const res = await saveStory(this.form)
+      // 确保 projectId 始终使用当前选中项目
+      const payload = { ...this.form, projectId: store.currentProjectId }
+      const res = await saveStory(payload)
       if (res.code === 200) { this.$message.success(this.isEdit ? '已更新' : '已创建'); this.dialogVisible = false; this.loadStories() }
       else this.$message.error(res.msg)
     },
@@ -212,4 +233,6 @@ export default {
 .status-dot.todo { background: #dbeafe; color: #1d4ed8; }
 .status-dot.doing { background: #fef3c7; color: #92400e; }
 .status-dot.done { background: #d1fae5; color: #065f46; }
+.assignee-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
+.assignee-empty { color: var(--text-muted); }
 </style>

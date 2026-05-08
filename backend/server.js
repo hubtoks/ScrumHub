@@ -14,11 +14,13 @@ const userStoriesRouter = require('./routes/userStories')
 const iterationsRouter = require('./routes/iterations')
 const retrospectsRouter = require('./routes/retrospects')
 const dashboardRouter = require('./routes/dashboard')
+const projectsRouter = require('./routes/projects')
 
 app.use('/userStories', userStoriesRouter)
 app.use('/iterations', iterationsRouter)
 app.use('/retrospects', retrospectsRouter)
 app.use('/dashboard', dashboardRouter)
+app.use('/projects', projectsRouter)
 
 // ==================== 启动：先建库建表，再启动服务 ====================
 initDatabase()

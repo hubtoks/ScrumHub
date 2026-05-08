@@ -138,34 +138,49 @@ export default {
   },
   computed: {
     currentIteration() { return store.currentIteration },
+    iterationId() { return store.currentIterationId },
+    projectId() { return store.currentProjectId },
     totalPoints() { return this.iterStories.reduce((s, st) => s + Number(st.points), 0) }
   },
   watch: {
-    // 当 store 中的迭代列表变化时，校验并同步 selectedIterationId
-    'store.currentIterationId'(val) {
+    iterationId(val) {
       this.selectedIterationId = val
+    },
+    projectId: {
+      handler() {
+        // 同步清空旧数据，避免异步加载前闪现上一个项目的内容
+        this.iterations = []
+        this.iterStories = []
+        this.backlogStories = []
+        this.selectedIterationId = null
+        this.loadData()
+      },
+      immediate: true
     }
   },
-  mounted() { this.loadData() },
   methods: {
     async loadData() {
+      const projectId = store.currentProjectId
+      if (!projectId) { this.iterations = []; this.backlogStories = []; return }
       await this.loadIterations()
       await this.loadBacklog()
       if (this.selectedIterationId) await this.loadIterStories()
     },
     async loadIterations() {
-      const res = await getIterations()
+      const projectId = store.currentProjectId
+      if (!projectId) return
+      const res = await getIterations({ projectId })
       if (res.code === 200) {
         store.iterations = res.data
         this.iterations = res.data
-        // 校验 store 中的迭代ID是否有效，防止切换数据库后显示裸ID
         store.validateIterationId()
-        // 同步本地 selectedIterationId
         this.selectedIterationId = store.currentIterationId
       }
     },
     async loadBacklog() {
-      const res = await getStories({ iterationId: 'null', status: 'todo' })
+      const projectId = store.currentProjectId
+      if (!projectId) return
+      const res = await getStories({ iterationId: 'null', status: 'todo', projectId })
       if (res.code === 200) this.backlogStories = res.data
     },
     async loadIterStories() {
@@ -194,7 +209,7 @@ export default {
     async handleCreateIteration() {
       const { name, startDate, endDate } = this.iterForm
       if (!name || !startDate || !endDate) { this.$message.warning('请填写完整信息'); return }
-      const res = await createIteration(this.iterForm)
+      const res = await createIteration({ ...this.iterForm, projectId: store.currentProjectId })
       if (res.code === 200) {
         this.$message.success('迭代创建成功'); this.dialogVisible = false
         store.currentIterationId = res.data.id

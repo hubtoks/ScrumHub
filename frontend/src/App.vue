@@ -15,6 +15,15 @@
       </div>
 
       <nav class="nav-list">
+        <router-link to="/projects" class="nav-item" active-class="active">
+          <span class="nav-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+          </span>
+          <span class="nav-label">项目管理</span>
+        </router-link>
+
         <router-link to="/stories" class="nav-item" exact-active-class="active">
           <span class="nav-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -33,7 +42,7 @@
               <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
             </svg>
           </span>
-          <span class="nav-label">产品待办列表</span>
+          <span class="nav-label">未开始故事</span>
         </router-link>
 
         <router-link to="/planning" class="nav-item" active-class="active">
@@ -79,6 +88,21 @@
 
     <!-- 右侧内容区 -->
     <main class="main-area">
+      <div class="top-bar">
+        <div class="top-bar-left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="top-bar-icon">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span class="top-bar-label">当前项目</span>
+          <el-select v-model="selectedProjectId" placeholder="选择项目" @change="onProjectChange" size="default">
+            <el-option v-for="p in projects" :key="p.id" :label="p.name" :value="p.id" />
+          </el-select>
+          <span v-if="currentProject" class="top-bar-project">{{ currentProject.name }}</span>
+        </div>
+        <div class="top-bar-right">
+          <span class="top-bar-hint" v-if="!selectedProjectId">← 请先选择一个项目</span>
+        </div>
+      </div>
       <div class="content-wrapper">
         <router-view />
       </div>
@@ -87,7 +111,39 @@
 </template>
 
 <script>
-export default { name: 'App' }
+import { getProjects } from './api'
+import { store } from './store'
+
+export default {
+  name: 'App',
+  data() {
+    return { selectedProjectId: null }
+  },
+  computed: {
+    storeProjectId() { return store.currentProjectId },
+    projects() { return store.projects },
+    currentProject() { return store.currentProject }
+  },
+  watch: {
+    storeProjectId(val) { this.selectedProjectId = val }
+  },
+  async mounted() {
+    await this.loadProjects()
+  },
+  methods: {
+    async loadProjects() {
+      const res = await getProjects()
+      if (res.code === 200) {
+        store.projects = res.data
+        store.validateProjectId()
+        this.selectedProjectId = store.currentProjectId
+      }
+    },
+    onProjectChange() {
+      store.currentProjectId = this.selectedProjectId
+    }
+  }
+}
 </script>
 
 <style>
@@ -239,6 +295,21 @@ body {
   min-height: 100vh;
   background: var(--bg-page);
 }
+/* 顶部项目选择栏 */
+.top-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 32px;
+  background: #fff; border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  position: sticky; top: 0; z-index: 10;
+}
+.top-bar-left { display: flex; align-items: center; gap: 10px; }
+.top-bar-icon { width: 18px; height: 18px; color: var(--primary); }
+.top-bar-label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+.top-bar-project { font-size: 14px; font-weight: 700; color: var(--primary); }
+.top-bar-right { display: flex; align-items: center; }
+.top-bar-hint { font-size: 12px; color: var(--text-muted); }
+.top-bar .el-select { width: 200px; }
 .content-wrapper {
   padding: 28px 32px;
   max-width: 1400px;

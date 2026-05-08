@@ -8,35 +8,48 @@ function loadState() {
 
 const saved = loadState()
 
-// 全局共享响应式状态——解决页面切换后迭代选择丢失的问题
 export const store = reactive({
+  currentProjectId: saved.currentProjectId || null,
   currentIterationId: saved.currentIterationId || null,
   backlogFilter: saved.backlogFilter || 'all',
+  projects: saved.projects || [],
   iterations: saved.iterations || []
 })
 
-// 计算属性：从缓存迭代列表中获取当前迭代
+Object.defineProperty(store, 'currentProject', {
+  get() {
+    return this.projects.find(p => p.id === this.currentProjectId) || null
+  }
+})
+
 Object.defineProperty(store, 'currentIteration', {
   get() {
     return this.iterations.find(i => i.id === this.currentIterationId) || null
   }
 })
 
-// 切换数据库后，旧 localStorage 中的迭代 ID 可能失效，在此校验
 store.validateIterationId = function () {
-  if (this.currentIterationId && this.iterations.length > 0) {
+  if (this.iterations.length === 0) {
+    this.currentIterationId = null
+  } else if (this.currentIterationId) {
     const exists = this.iterations.some(i => i.id === this.currentIterationId)
-    if (!exists) {
-      this.currentIterationId = null
-    }
+    if (!exists) this.currentIterationId = null
   }
 }
 
-// 监听 store 变更，自动保存到 localStorage
+store.validateProjectId = function () {
+  if (this.currentProjectId && this.projects.length > 0) {
+    const exists = this.projects.some(p => p.id === this.currentProjectId)
+    if (!exists) this.currentProjectId = null
+  }
+}
+
 watch(
   () => ({
+    currentProjectId: store.currentProjectId,
     currentIterationId: store.currentIterationId,
     backlogFilter: store.backlogFilter,
+    projects: store.projects,
     iterations: store.iterations
   }),
   (val) => {

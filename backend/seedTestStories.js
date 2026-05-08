@@ -115,6 +115,19 @@ async function seed() {
   const pool = mysql.createPool(DB_CONFIG)
 
   try {
+    // 确保有项目，取第一个作为默认
+    let [projects] = await pool.execute('SELECT id FROM projects LIMIT 1')
+    let projectId = projects[0]?.id
+    if (!projectId) {
+      const id = generateId()
+      await pool.execute(
+        'INSERT INTO projects (id, name, description, create_time) VALUES (?, ?, ?, ?)',
+        [id, '默认项目', '系统自动创建的默认项目', now()]
+      )
+      projectId = id
+      console.log('已创建默认项目')
+    }
+
     const [rows] = await pool.execute('SELECT COUNT(*) as cnt FROM user_stories')
     const existingCount = rows[0].cnt
     console.log(`当前数据库中有 ${existingCount} 条用户故事\n`)
@@ -127,9 +140,9 @@ async function seed() {
       const createTime = now()
 
       await pool.execute(
-        `INSERT INTO user_stories (id, title, description, points, priority, status, iteration_id, create_time)
-         VALUES (?, ?, ?, ?, ?, ?, NULL, ?)`,
-        [id, story.title, story.description, story.points, priority, story.status, createTime]
+        `INSERT INTO user_stories (id, title, description, points, priority, status, iteration_id, project_id, assignee, create_time)
+         VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)`,
+        [id, story.title, story.description, story.points, priority, story.status, projectId, '', createTime]
       )
       insertedCount++
       console.log(`✓ 已插入: [${story.status}] ${story.title} (${story.points}点)`)

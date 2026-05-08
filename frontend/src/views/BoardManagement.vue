@@ -163,19 +163,32 @@ export default {
   },
   computed: {
     currentIteration() { return store.currentIteration },
+    iterationId() { return store.currentIterationId },
+    projectId() { return store.currentProjectId },
     todoStories() { return this.stories.filter(s => s.status === 'todo') },
     doingStories() { return this.stories.filter(s => s.status === 'doing') },
     doneStories() { return this.stories.filter(s => s.status === 'done') }
   },
   watch: {
-    'store.currentIterationId'(val) {
+    iterationId(val) {
       this.selectedIterationId = val
+    },
+    projectId: {
+      handler() {
+        // 同步清空旧数据，避免异步加载前闪现上一个项目的内容
+        this.iterations = []
+        this.stories = []
+        this.selectedIterationId = null
+        this.loadIterations()
+      },
+      immediate: true
     }
   },
-  mounted() { this.loadIterations() },
   methods: {
     async loadIterations() {
-      const res = await getIterations()
+      const projectId = store.currentProjectId
+      if (!projectId) { this.iterations = []; return }
+      const res = await getIterations({ projectId })
       if (res.code === 200) {
         store.iterations = res.data
         this.iterations = res.data

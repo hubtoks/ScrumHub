@@ -76,10 +76,18 @@ export default {
   data() {
     return { stories: [], filter: store.backlogFilter || 'all' }
   },
-  mounted() { this.loadStories() },
+  computed: {
+    projectId() { return store.currentProjectId }
+  },
+  watch: {
+    projectId: { handler() { this.loadStories() }, immediate: true }
+  },
   methods: {
     async loadStories() {
-      const params = this.filter === 'todo' ? { status: 'todo' } : {}
+      const projectId = store.currentProjectId
+      if (!projectId) { this.stories = []; return }
+      const params = { projectId }
+      if (this.filter === 'todo') params.status = 'todo'
       const res = await getStories(params)
       if (res.code === 200) this.stories = res.data
     },

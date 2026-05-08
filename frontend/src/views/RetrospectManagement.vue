@@ -108,17 +108,28 @@ export default {
     return { iterations: [], selectedIterationId: null, goodItems: ['','',''], improveItems: ['','',''], retroMap: {} }
   },
   computed: {
-    currentIteration() { return store.currentIteration }
+    currentIteration() { return store.currentIteration },
+    iterationId() { return store.currentIterationId },
+    projectId() { return store.currentProjectId }
   },
   watch: {
-    'store.currentIterationId'(val) {
+    iterationId(val) {
       this.selectedIterationId = val
+    },
+    projectId: {
+      handler() {
+        this.iterations = []
+        this.selectedIterationId = null
+        this.loadIterations()
+      },
+      immediate: true
     }
   },
-  mounted() { this.loadIterations() },
   methods: {
     async loadIterations() {
-      const res = await getIterations()
+      const projectId = store.currentProjectId
+      if (!projectId) { this.iterations = []; return }
+      const res = await getIterations({ projectId })
       if (res.code === 200) {
         store.iterations = res.data
         this.iterations = res.data
