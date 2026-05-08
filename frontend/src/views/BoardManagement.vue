@@ -219,8 +219,35 @@ export default {
     },
 
     // 拖拽：放置时更新故事状态，自动刷新燃尽图
+    // 状态流转限制：doing→todo 和 done→* 需要确认
     async onDrop(event, newStatus) {
       if (!this.dragStory || this.dragStory.status === newStatus) return
+      const current = this.dragStory.status
+
+      // 非正向流转（doing→todo 或 done→doing/todo）需要弹窗确认
+      const needsConfirm =
+        (current === 'doing' && newStatus === 'todo') ||
+        (current === 'done' && (newStatus === 'todo' || newStatus === 'doing'))
+
+      if (needsConfirm) {
+        // 构建合适的提示文案
+        let msg = ''
+        if (current === 'doing' && newStatus === 'todo') {
+          msg = '确定要将进行中的故事退回未开始吗？'
+        } else if (current === 'done') {
+          msg = newStatus === 'doing'
+            ? '确定要将已完成的故事退回进行中吗？'
+            : '确定要将已完成的故事退回未开始吗？'
+        }
+
+        try {
+          await this.$confirm(msg, '状态变更确认', { type: 'warning' })
+        } catch (_) {
+          this.dragStory = null
+          return
+        }
+      }
+
       const res = await saveStory({ id: this.dragStory.id, status: newStatus })
       if (res.code === 200) { await this.loadBoard() } else { this.$message.error(res.msg) }
       this.dragStory = null

@@ -32,6 +32,21 @@ router.post('/', async (req, res) => {
       return res.json({ code: 400, data: null, msg: '请选择项目' })
     }
 
+    // 结束日期必须晚于开始日期
+    if (endDate <= startDate) {
+      return res.json({ code: 400, data: null, msg: '结束日期必须晚于开始日期' })
+    }
+
+    // 同一项目下的迭代时间不能重叠
+    const existing = await query(
+      `SELECT * FROM iterations
+       WHERE project_id = ? AND NOT (end_date < ? OR start_date > ?)`,
+      [projectId, startDate, endDate]
+    )
+    if (existing.length > 0) {
+      return res.json({ code: 400, data: null, msg: '当前项目下已有重叠时间的迭代，请调整日期' })
+    }
+
     const newId = generateId()
     const createTime = now()
 

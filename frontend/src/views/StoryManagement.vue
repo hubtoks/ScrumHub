@@ -150,7 +150,11 @@ export default {
     },
     async handleDelete(row) {
       try {
-        await this.$confirm('确定删除「' + row.title + '」？', '确认删除', { type: 'warning' })
+        // 已分配至迭代的故事，删除时需要特殊确认
+        const confirmMsg = row.iterationId
+          ? '该故事已分配至迭代，删除后将从迭代中移除，确认删除？'
+          : '确定删除「' + row.title + '」？'
+        await this.$confirm(confirmMsg, '确认删除', { type: 'warning' })
         const res = await deleteStory(row.id)
         if (res.code === 200) { this.$message.success('已删除'); this.loadStories() }
         else this.$message.error(res.msg)
