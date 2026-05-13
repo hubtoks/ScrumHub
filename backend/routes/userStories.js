@@ -59,6 +59,7 @@ router.post('/', async (req, res) => {
       if (existing.length === 0) {
         return res.json({ code: 404, data: null, msg: '用户故事不存在' })
       }
+      const oldStory = existing[0]
 
       const fields = []
       const values = []
@@ -66,13 +67,36 @@ router.post('/', async (req, res) => {
       if (description !== undefined) { fields.push('description = ?'); values.push(description) }
       if (points !== undefined) { fields.push('points = ?'); values.push(points) }
       if (priority !== undefined) { fields.push('priority = ?'); values.push(priority) }
-      if (status !== undefined) { fields.push('status = ?'); values.push(status) }
       if (iterationId !== undefined) { fields.push('iteration_id = ?'); values.push(iterationId) }
       if (assignee !== undefined) { fields.push('assignee = ?'); values.push(assignee) }
 
+      // 状态变更：记录 history + 维护 completed_at
+      if (status !== undefined && status !== oldStory.status) {
+        fields.push('status = ?'); values.push(status)
+
+        const timeNow = now()
+        // 变为 done：记录完成时间
+        if (status === 'done') {
+          fields.push('completed_at = ?'); values.push(timeNow)
+        }
+        // 从 done 退回：清空完成时间
+        if (oldStory.status === 'done' && status !== 'done') {
+          fields.push('completed_at = NULL'); values.push(null)
+        }
+
+        // 插入状态变更历史
+        const historyId = generateId()
+        const iterId = oldStory.iterationId || null
+        await query(
+          `INSERT INTO story_history (id, story_id, iteration_id, from_status, to_status, points, changed_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [historyId, id, iterId, oldStory.status, status, oldStory.points, timeNow]
+        )
+      }
+
       if (fields.length > 0) {
-        const sql = `UPDATE user_stories SET ${fields.join(', ')} WHERE id = ?`
-        await query(sql, [...values, id])
+        const sql2 = `UPDATE user_stories SET ${fields.join(', ')} WHERE id = ?`
+        await query(sql2, [...values, id])
       }
 
       const [updated] = await query('SELECT * FROM user_stories WHERE id = ?', [id])

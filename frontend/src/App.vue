@@ -42,7 +42,7 @@
               <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
             </svg>
           </span>
-          <span class="nav-label">未开始故事</span>
+          <span class="nav-label">产品待办列表</span>
         </router-link>
 
         <router-link to="/planning" class="nav-item" active-class="active">

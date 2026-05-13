@@ -55,6 +55,7 @@ router.delete('/:id', async (req, res) => {
       const [iterRows] = await conn.execute('SELECT id FROM iterations WHERE project_id = ?', [projectId])
       for (const iter of iterRows) {
         await conn.execute('DELETE FROM retrospects WHERE iteration_id = ?', [iter.id])
+        await conn.execute('DELETE FROM story_history WHERE iteration_id = ?', [iter.id])
       }
       await conn.execute('DELETE FROM iterations WHERE project_id = ?', [projectId])
       // 删除项目自身

@@ -98,6 +98,7 @@ async function initDatabase() {
       iteration_id VARCHAR(50) DEFAULT NULL,
       project_id VARCHAR(50) DEFAULT NULL,
       assignee VARCHAR(100) DEFAULT '',
+      completed_at VARCHAR(20) DEFAULT NULL,
       create_time VARCHAR(20) NOT NULL,
       INDEX idx_status (status),
       INDEX idx_iteration (iteration_id),
@@ -131,9 +132,25 @@ async function initDatabase() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `)
 
+  // 状态变更历史表——用于燃尽图按日期累计已完成点数
+  await query(`
+    CREATE TABLE IF NOT EXISTS story_history (
+      id VARCHAR(50) PRIMARY KEY,
+      story_id VARCHAR(50) NOT NULL,
+      iteration_id VARCHAR(50) DEFAULT NULL,
+      from_status VARCHAR(20) NOT NULL,
+      to_status VARCHAR(20) NOT NULL,
+      points DECIMAL(4,1) NOT NULL DEFAULT 0,
+      changed_at VARCHAR(20) NOT NULL,
+      INDEX idx_story (story_id),
+      INDEX idx_iter_date (iteration_id, changed_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `)
+
   // 兼容旧表：ALTER 添加可能缺失的新列
   await addColumnIfNotExists('user_stories', 'project_id', 'VARCHAR(50) DEFAULT NULL')
   await addColumnIfNotExists('user_stories', 'assignee', "VARCHAR(100) DEFAULT ''")
+  await addColumnIfNotExists('user_stories', 'completed_at', 'VARCHAR(20) DEFAULT NULL')
   await addColumnIfNotExists('iterations', 'project_id', 'VARCHAR(50) DEFAULT NULL')
 
   // 如果没有默认项目，创建一个
@@ -150,7 +167,7 @@ async function initDatabase() {
     console.log('[DB] 已创建默认项目并关联历史数据')
   }
 
-  console.log('[DB] 数据表已就绪（projects, user_stories, iterations, retrospects）')
+  console.log('[DB] 数据表已就绪（projects, user_stories, iterations, retrospects, story_history）')
 }
 
 // ALTER 安全添加列（忽略已存在的列）

@@ -78,6 +78,7 @@ router.delete('/:id', async (req, res) => {
         ['todo', iterationId]
       )
       await conn.execute('DELETE FROM retrospects WHERE iteration_id = ?', [iterationId])
+      await conn.execute('DELETE FROM story_history WHERE iteration_id = ?', [iterationId])
       await conn.execute('DELETE FROM iterations WHERE id = ?', [iterationId])
     })
 
